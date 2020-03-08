@@ -11,12 +11,11 @@ const logger = require('morgan');
 const ReactRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const leadsRouter = require('./routes/leads');
+const merchantsRouter = require('./routes/merchants');
 
 const Actions = require('./services/actions');
 
 const app = express();
-
-console.log('contents from dotenv file >> ', process.env);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -31,6 +30,7 @@ app.use('/dist', express.static(path.join(__dirname, '../../dist')));
 
 app.use('/api/users', usersRouter);
 app.use('/api/contact', leadsRouter);
+app.use('/api/merchants', merchantsRouter);
 
 /* entrypoint for messenger webhook */
 app.post('/webhook', (req, res) => {
@@ -81,6 +81,14 @@ app.get('/webhook', (req, res) => {
   }
 });
 
+app.get('/r/:receiptId', async (req, res) => {
+  const receiptId = req.params.receiptId;
+  const receipts = await Actions.getReceipt({receiptId});
+  const orderId = receipts.order_id;
+  const lineItems = await Actions.getLineItems({orderId});
+  res.json({receipt: receipts, lineItems: lineItems});
+});
+
 // @note: test routes, will be deleted once integrated with chatbot
 
 app.get('/c', async (req, res) => {
@@ -89,7 +97,7 @@ app.get('/c', async (req, res) => {
   res.send(`Creating customer or returning existing customer`);
 });
 
-app.get('/d', async (req, res) => {
+app.get('/oc', async (req, res) => {
   const {psid, merchantId} = req.query;
   const orderId = await Actions.initiatOrderProcess({psid, merchantId});
   res.send(`Order created with ID: ${orderId}`);
